@@ -1,0 +1,43 @@
+{
+  "best_model": "random_forest",
+  "accuracy": 0.8033,
+  "f1": 0.7807,
+  "auc_roc": 0.886,
+  "train_size": 1200,
+  "test_size": 300,
+  "feature_cols": [
+    "competitor_density",
+    "foot_traffic_score",
+    "infrastructure_score",
+    "income_proxy",
+    "transit_stops_nearby",
+    "google_rating",
+    "review_count"
+  ],
+  "feature_labels": {
+    "competitor_density": "Competitor density",
+    "foot_traffic_score": "Foot traffic score",
+    "infrastructure_score": "Infrastructure quality",
+    "income_proxy": "Area income level",
+    "transit_stops_nearby": "Transit accessibility",
+    "google_rating": "Avg. nearby rating",
+    "review_count": "Review volume"
+  },
+  "benchmark": {
+    "random_forest": {
+      "accuracy": 0.8033,
+      "f1": 0.7807,
+      "auc_roc": 0.886
+    },
+    "xgboost": {
+      "accuracy": 0.76,
+      "f1": 0.7353,
+      "auc_roc": 0.8577
+    },
+    "svm": {
+      "accuracy": 0.7867,
+      "f1": 0.7647,
+      "auc_roc": 0.8783
+    }
+  }
+}
