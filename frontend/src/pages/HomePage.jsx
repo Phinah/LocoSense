@@ -28,15 +28,15 @@ export default function HomePage({ onNavigate }) {
     <div className="max-w-5xl mx-auto px-4 py-16">
       {/* Hero */}
       <div className="text-center mb-16">
-        <div className="inline-flex items-center gap-2 bg-brand-50 text-brand-600 text-sm font-medium px-3 py-1 rounded-full mb-6">
+        {/* <div className="inline-flex items-center gap-2 bg-brand-50 text-brand-600 text-sm font-medium px-3 py-1 rounded-full mb-6">
           <MapPin size={14} /> Kigali, Rwanda · MVP v0.1
-        </div>
+        </div> */}
         <h1 className="text-4xl font-bold text-gray-900 mb-4">
           Stop guessing. Start knowing.
         </h1>
         <p className="text-xl text-gray-500 max-w-2xl mx-auto mb-8">
           LocoSense AI tells entrepreneurs in Kigali which locations are most likely
-          to support a successful restaurant — before they sign a lease.
+          to support a successful restaurant before they sign a lease.
         </p>
         <div className="flex gap-3 justify-center flex-wrap">
           <button

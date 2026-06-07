@@ -22,7 +22,7 @@ export default function App() {
         {pages[page] || pages.home}
       </main>
       <footer className="border-t border-gray-200 py-4 text-center text-sm text-gray-400">
-        LocoSense AI · Kigali Business Location Intelligence · MVP v0.1
+        LocoSense AI · Kigali Business Location Intelligence 
       </footer>
     </div>
   )

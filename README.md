@@ -2,8 +2,7 @@
 
 **ML-based business location recommendation system for entrepreneurs in Kigali, Rwanda.**
 
-> MVP v0.1 · BSc Software Engineering Capstone · Africa Quantitative Sciences
-
+> BSc Software Engineering Capstone ·
 ---
 
 ## Description
@@ -14,7 +13,7 @@ LocoSense AI helps first-time entrepreneurs in Kigali decide *where* to open a r
 
 ## GitHub Repository
 
-https://github.com/YOUR_USERNAME/locosense-ai
+https://github.com/Phinah/LocoSense
 
 ---
 
