@@ -1,13 +1,24 @@
-# LocoSense AI
+# Hunch AI
 
 **ML-based business location recommendation system for entrepreneurs in Kigali, Rwanda.**
 
 > BSc Software Engineering Capstone ·
 ---
+## Deployed Links
+
+Frontend: https://loco-sense-o6rw-lime.vercel.app/
+Backend: https://locosense.onrender.com
+
+
+
+## Video Demo
+https://drive.google.com/drive/folders/1k9Adgj7xyYVH9rPjKtASCxCKR8ymCEtu?usp=sharing
+
+
 
 ## Description
 
-LocoSense AI helps first-time entrepreneurs in Kigali decide *where* to open a restaurant by scoring candidate locations on 7 data-driven indicators competitor density, foot traffic, infrastructure quality, area income level, transit accessibility, nearby review ratings, and review volume. A supervised XGBoost model (benchmarked against Random Forest and SVM) trained on 1,500 geo-referenced Kigali restaurant records produces a 0–100 suitability score with feature-level explanations.
+Hunch AI helps first-time entrepreneurs in Kigali decide *where* to open a restaurant by scoring candidate locations on 7 data-driven indicators competitor density, foot traffic, infrastructure quality, area income level, transit accessibility, nearby review ratings, and review volume. A supervised XGBoost model (benchmarked against Random Forest and SVM) trained on 1,500 geo-referenced Kigali restaurant records produces a 0–100 suitability score with feature-level explanations.
 
 ---
 
@@ -90,27 +101,4 @@ Location input form + Leaflet map + score ring + feature chart
 Dataset stats cards + label distribution chart + records table 
 
 ---
-
-## Deployment plan
-
-| Layer    | Service         | Notes                                        |
-|----------|-----------------|----------------------------------------------|
-| Frontend | Vercel          | `npm run build` → auto-deploy on push to main |
-| Backend  | Render.com      | Docker container, auto-deploy on push        |
-| Database | Railway (MySQL) or Render Postgres | Managed PostgreSQL   |
-| CI/CD    | GitHub Actions  | Lint + test on PR, deploy on merge to main   |
-
-### Production deploy (Render)
-
-1. Push repo to GitHub
-2. Create new Web Service on Render → Docker → point to `/backend`
-3. Set `DATABASE_URL` environment variable
-4. Create Render Postgres instance, copy connection string
-5. On Vercel: import repo, set `VITE_API_URL` to Render backend URL
-
-
-## Video Demo
-
-https://drive.google.com/file/d/1BvLNxo5O6k-rUK6JiQBNaqFsEEmfxupm/view?usp=sharing
-
 
