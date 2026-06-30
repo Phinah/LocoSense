@@ -1,10 +1,11 @@
 {
   "best_model": "random_forest",
-  "accuracy": 0.8033,
-  "f1": 0.7807,
-  "auc_roc": 0.886,
-  "train_size": 1200,
-  "test_size": 300,
+  "accuracy": 0.7371,
+  "f1": 0.7374,
+  "auc_roc": 0.8266,
+  "train_size": 3576,
+  "test_size": 894,
+  "n_features": 11,
   "feature_cols": [
     "competitor_density",
     "foot_traffic_score",
@@ -12,32 +13,52 @@
     "income_proxy",
     "transit_stops_nearby",
     "google_rating",
-    "review_count"
+    "review_count",
+    "price_level",
+    "years_operational",
+    "is_chain",
+    "has_photos"
   ],
   "feature_labels": {
     "competitor_density": "Competitor density",
     "foot_traffic_score": "Foot traffic score",
     "infrastructure_score": "Infrastructure quality",
-    "income_proxy": "Area income level",
+    "income_proxy": "Area income level (RWF)",
     "transit_stops_nearby": "Transit accessibility",
-    "google_rating": "Avg. nearby rating",
-    "review_count": "Review volume"
+    "google_rating": "Google rating",
+    "review_count": "Review volume",
+    "price_level": "Price level (0-4)",
+    "years_operational": "Years in operation",
+    "is_chain": "Chain vs independent",
+    "has_photos": "Has photo presence"
   },
+  "sectors": [
+    "Kimironko",
+    "Remera",
+    "Kicukiro",
+    "Nyamirambo",
+    "Gisozi",
+    "CityCenter",
+    "Gikondo",
+    "Niboye",
+    "Kanombe",
+    "Kibagabaga"
+  ],
   "benchmark": {
     "random_forest": {
-      "accuracy": 0.8033,
-      "f1": 0.7807,
-      "auc_roc": 0.886
+      "accuracy": 0.7371,
+      "f1": 0.7374,
+      "auc_roc": 0.8266
     },
     "xgboost": {
-      "accuracy": 0.76,
-      "f1": 0.7353,
-      "auc_roc": 0.8577
+      "accuracy": 0.7371,
+      "f1": 0.7392,
+      "auc_roc": 0.8113
     },
     "svm": {
-      "accuracy": 0.7867,
-      "f1": 0.7647,
-      "auc_roc": 0.8783
+      "accuracy": 0.7349,
+      "f1": 0.7352,
+      "auc_roc": 0.8055
     }
   }
 }

@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from app.db.session import engine, Base, SessionLocal
-from app.api import predict, records, sectors, health
+from app.api import predict, records, sectors, health, dataset
 from app.ml.model import model_registry
 from app.db.seed import seed_sectors
 
@@ -21,9 +21,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="LocoSense AI API",
-    description="Business location recommendation system for Kigali, Rwanda",
-    version="0.1.0",
+    title="Hunch API",
+    description="Business location recommendation system for Rwanda",
+    version="2.0.0",
     lifespan=lifespan,
 )
 
@@ -35,7 +35,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(health.router, tags=["health"])
-app.include_router(predict.router, prefix="/api/v1", tags=["predict"])
-app.include_router(records.router, prefix="/api/v1", tags=["records"])
-app.include_router(sectors.router, prefix="/api/v1", tags=["sectors"])
+app.include_router(health.router,   tags=["health"])
+app.include_router(predict.router,  prefix="/api/v1", tags=["predict"])
+app.include_router(records.router,  prefix="/api/v1", tags=["records"])
+app.include_router(sectors.router,  prefix="/api/v1", tags=["sectors"])
+app.include_router(dataset.router,  prefix="/api/v1", tags=["dataset"])

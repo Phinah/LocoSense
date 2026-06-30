@@ -25,8 +25,9 @@ https://github.com/Phinah/LocoSense
 
 ```bash
 # 1. Clone
-git clone https://github.com/YOUR_USERNAME/locosense-ai.git
-cd locosense-ai
+git clone https://github.com/Phinah/LocoSense.git
+
+cd LocoSense
 
 # 2. Start all services (DB + backend + frontend)
 docker-compose up --build
