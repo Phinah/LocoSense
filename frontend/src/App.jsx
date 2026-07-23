@@ -4,16 +4,22 @@ import HomePage from './pages/HomePage'
 import PredictPage from './pages/PredictPage'
 import RegisterPage from './pages/RegisterPage'
 import DataPage from './pages/DataPage'
+import AdvisorPage from './pages/AdvisorPage'
+import InvestorPage from './pages/InvestorPage'
+import RecommendPage from './pages/RecommendPage'
 import { Lightbulb } from 'lucide-react'
 
 export default function App() {
   const [page, setPage] = useState('home')
 
   const pages = {
-    home:     <HomePage     onNavigate={setPage} />,
-    predict:  <PredictPage  onNavigate={setPage} />,
+    home: <HomePage onNavigate={setPage} />,
+    predict: <PredictPage onNavigate={setPage} />,
+    advisor: <AdvisorPage onNavigate={setPage} />,
+    investor: <InvestorPage onNavigate={setPage} />,
     register: <RegisterPage onNavigate={setPage} />,
-    data:     <DataPage     onNavigate={setPage} />,
+    data: <DataPage onNavigate={setPage} />,
+    recommend: <RecommendPage onNavigate={setPage} />,  // ← add
   }
 
   return (
@@ -31,9 +37,9 @@ export default function App() {
             Hunch
           </div>
           <p className="text-sm text-gray-400 text-center">
-            Rwanda Business Location Intelligence · ALU Capstone {new Date().getFullYear()}
+            Rwanda Business Location Intelligence · ALU Capstone 2026
           </p>
-          <p className="text-xs text-gray-300">Powered by Random Forest + Google Places</p>
+          <p className="text-xs text-gray-300">Powered by Random Forest + Claude AI</p>
         </div>
       </footer>
     </div>

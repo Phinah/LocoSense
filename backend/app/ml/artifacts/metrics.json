@@ -1,8 +1,8 @@
 {
   "best_model": "random_forest",
-  "accuracy": 0.7371,
-  "f1": 0.7374,
-  "auc_roc": 0.8266,
+  "accuracy": 0.7383,
+  "f1": 0.7371,
+  "auc_roc": 0.826,
   "train_size": 3576,
   "test_size": 894,
   "n_features": 11,
@@ -46,9 +46,9 @@
   ],
   "benchmark": {
     "random_forest": {
-      "accuracy": 0.7371,
-      "f1": 0.7374,
-      "auc_roc": 0.8266
+      "accuracy": 0.7383,
+      "f1": 0.7371,
+      "auc_roc": 0.826
     },
     "xgboost": {
       "accuracy": 0.7371,

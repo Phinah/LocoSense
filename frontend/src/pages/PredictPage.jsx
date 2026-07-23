@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react'
 import { predict, getSectorsGrouped } from '../utils/api'
+import { validatePredictForm } from '../utils/validation'
+import { BUSINESS_TYPES } from '../utils/featureDescriptions'
 import KigaliMap from '../components/KigaliMap'
 import ScoreRing from '../components/ScoreRing'
 import FeatureChart from '../components/FeatureChart'
-import { Loader2, AlertCircle, MapPin } from 'lucide-react'
+import AreaAnalysis from '../components/AreaAnalysis'
+import { Loader2, AlertCircle, MapPin, Info, Crosshair } from 'lucide-react'
 
 const verdictStyles = {
   'Recommended':     'bg-green-50 text-green-700 border-green-200',
@@ -11,30 +14,55 @@ const verdictStyles = {
   'Not recommended': 'bg-red-50 text-red-600 border-red-200',
 }
 
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLng = (lng2 - lng1) * Math.PI / 180
+  const a = Math.sin(dLat/2)**2 +
+    Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+}
+
+function nearestSector(lat, lng, grouped) {
+  let best = null, bestDist = Infinity
+  for (const sectors of Object.values(grouped)) {
+    for (const s of sectors) {
+      const d = haversine(lat, lng, s.lat, s.lng)
+      if (d < bestDist) { bestDist = d; best = s }
+    }
+  }
+  return best
+}
+
+const FieldError = ({ msg }) =>
+  msg ? (
+    <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+      <AlertCircle size={11}/>{msg}
+    </p>
+  ) : null
+
 export default function PredictPage() {
-  const [groupedSectors, setGroupedSectors] = useState({})
-  const [sector, setSector]   = useState('Kimironko')
-  const [lat,    setLat]      = useState(-1.9302)
-  const [lng,    setLng]      = useState(30.1074)
-  const [result, setResult]   = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [error,   setError]   = useState(null)
+  const [groupedSectors,  setGroupedSectors]  = useState({})
+  const [sector,          setSector]          = useState('Kimironko')
+  const [lat,             setLat]             = useState(-1.9302)
+  const [lng,             setLng]             = useState(30.1074)
+  const [businessType,    setBusinessType]    = useState('restaurant')
+  const [detectedSector,  setDetectedSector]  = useState(null)
+  const [result,          setResult]          = useState(null)
+  const [loading,         setLoading]         = useState(false)
+  const [error,           setError]           = useState(null)
+  const [fieldErrors,     setFieldErrors]     = useState({})
+  const [showAdv,         setShowAdv]         = useState(false)
+  const [competitors,     setCompetitors]     = useState('')
+  const [footTraffic,     setFootTraffic]     = useState('')
+  const [infraScore,      setInfraScore]      = useState('')
 
-  const [showAdv,      setShowAdv]      = useState(false)
-  const [competitors,  setCompetitors]  = useState('')
-  const [footTraffic,  setFootTraffic]  = useState('')
-  const [infraScore,   setInfraScore]   = useState('')
-
-  // Fetch sectors from API on mount
   useEffect(() => {
-    getSectorsGrouped()
-      .then(setGroupedSectors)
-      .catch(() => {})
+    getSectorsGrouped().then(setGroupedSectors).catch(() => {})
   }, [])
 
   const handleSectorChange = (name) => {
-    setSector(name)
-    // Find lat/lng from grouped sectors
+    setSector(name); setDetectedSector(null)
     for (const sectors of Object.values(groupedSectors)) {
       const found = sectors.find((s) => s.name === name)
       if (found) { setLat(found.lat); setLng(found.lng); break }
@@ -42,158 +70,229 @@ export default function PredictPage() {
   }
 
   const handleMapClick = ({ lat: clickLat, lng: clickLng }) => {
-    setLat(parseFloat(clickLat.toFixed(4)))
-    setLng(parseFloat(clickLng.toFixed(4)))
+    const newLat = parseFloat(clickLat.toFixed(4))
+    const newLng = parseFloat(clickLng.toFixed(4))
+    setLat(newLat); setLng(newLng)
+    setFieldErrors((p) => ({ ...p, lat: undefined, lng: undefined }))
+    if (Object.keys(groupedSectors).length > 0) {
+      const nearest = nearestSector(newLat, newLng, groupedSectors)
+      if (nearest) { setSector(nearest.name); setDetectedSector(nearest.name) }
+    }
   }
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true); setError(null); setResult(null)
+    e.preventDefault(); setError(null)
+    const { valid, errors } = validatePredictForm({ lat, lng, footTraffic, infraScore, competitors })
+    if (!valid) { setFieldErrors(errors); return }
+    setFieldErrors({}); setLoading(true); setResult(null)
     try {
       const data = await predict({
-        business_type:        'restaurant',
+        business_type:        businessType,
         target_lat:           lat,
         target_lng:           lng,
         target_sector_name:   sector,
-        competitor_density:   competitors ? parseInt(competitors)    : null,
-        foot_traffic_score:   footTraffic ? parseFloat(footTraffic)  : null,
-        infrastructure_score: infraScore  ? parseFloat(infraScore)   : null,
+        competitor_density:   competitors !== '' ? parseInt(competitors)   : null,
+        foot_traffic_score:   footTraffic !== '' ? parseFloat(footTraffic) : null,
+        infrastructure_score: infraScore  !== '' ? parseFloat(infraScore)  : null,
       })
       setResult(data)
     } catch (err) {
-      setError(err.response?.data?.detail || 'Something went wrong. Is the backend running?')
-    } finally {
-      setLoading(false)
-    }
+      const detail = err.response?.data?.detail
+      if (Array.isArray(detail)) {
+        const fe = {}
+        detail.forEach((d) => { const f = d.loc?.[d.loc.length-1]; if (f) fe[f] = d.msg })
+        setFieldErrors(fe)
+      } else {
+        setError(detail || 'Something went wrong. Is the backend running?')
+      }
+    } finally { setLoading(false) }
   }
+
+  const selectedBizType = BUSINESS_TYPES.find((b) => b.value === businessType)
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold text-gray-900 mb-1">Check a location</h1>
       <p className="text-gray-500 mb-6 text-sm">
-        Select a sector, click the map to pin a spot, then run the analysis.
+        Select your business type, pick a sector or click the map, then run the analysis.
       </p>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* ── LEFT: form + map ── */}
+        {/* ── LEFT ── */}
         <div className="space-y-4">
-          <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-100 p-5 space-y-4">
+          <form onSubmit={handleSubmit}
+            className="bg-white rounded-xl border border-gray-100 p-5 space-y-4" noValidate>
 
-            {/* Sector selector — grouped by province */}
+            {/* Business type */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                What type of business are you planning to open?
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {BUSINESS_TYPES.map((b) => (
+                  <button key={b.value} type="button" onClick={() => setBusinessType(b.value)}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors text-left ${
+                      businessType === b.value
+                        ? 'bg-brand-50 border-brand-400 text-brand-700 font-medium'
+                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}>
+                    <span>{b.icon}</span>
+                    <span className="truncate">{b.label}</span>
+                  </button>
+                ))}
+              </div>
+              {selectedBizType && (
+                <p className="mt-2 text-xs text-gray-400 flex items-start gap-1">
+                  <Info size={11} className="mt-0.5 shrink-0"/>
+                  {selectedBizType.tips}
+                </p>
+              )}
+            </div>
+
+            {/* Sector */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Sector</label>
-              <select
-                value={sector}
-                onChange={(e) => handleSectorChange(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-              >
-                {Object.keys(groupedSectors).length === 0 ? (
-                  <option>Loading…</option>
-                ) : (
-                  Object.entries(groupedSectors).map(([province, sectors]) => (
+              <select value={sector} onChange={(e) => handleSectorChange(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                {Object.keys(groupedSectors).length === 0
+                  ? <option>Loading sectors…</option>
+                  : Object.entries(groupedSectors).map(([province, sectors]) => (
                     <optgroup key={province} label={`── ${province} Province`}>
                       {sectors.map((s) => (
                         <option key={s.name} value={s.name}>{s.name}</option>
                       ))}
                     </optgroup>
                   ))
-                )}
+                }
               </select>
+              {detectedSector && (
+                <p className="mt-1 text-xs text-brand-600 flex items-center gap-1">
+                  <Crosshair size={11}/>
+                  Auto-detected from map: <strong>{detectedSector}</strong>
+                </p>
+              )}
             </div>
 
             {/* Coordinates */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Latitude</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Latitude *</label>
                 <input type="number" step="0.0001" value={lat}
-                  onChange={(e) => setLat(parseFloat(e.target.value))}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+                  onChange={(e) => { setLat(parseFloat(e.target.value)); setFieldErrors((p) => ({ ...p, lat: undefined })) }}
+                  className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 ${fieldErrors.lat ? 'border-red-400' : 'border-gray-200'}`}
+                />
+                <FieldError msg={fieldErrors.lat}/>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Longitude</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Longitude *</label>
                 <input type="number" step="0.0001" value={lng}
-                  onChange={(e) => setLng(parseFloat(e.target.value))}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+                  onChange={(e) => { setLng(parseFloat(e.target.value)); setFieldErrors((p) => ({ ...p, lng: undefined })) }}
+                  className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 ${fieldErrors.lng ? 'border-red-400' : 'border-gray-200'}`}
+                />
+                <FieldError msg={fieldErrors.lng}/>
               </div>
             </div>
 
-            {/* Advanced overrides */}
+            {/* Advanced */}
             <div>
               <button type="button" onClick={() => setShowAdv(!showAdv)}
                 className="text-sm text-brand-600 hover:underline">
                 {showAdv ? '− Hide' : '+ Show'} advanced overrides
               </button>
               {showAdv && (
-                <div className="mt-3 grid grid-cols-3 gap-3">
-                  {[
-                    { label: 'Nearby competitors', val: competitors, set: setCompetitors, type: 'number', step: '1' },
-                    { label: 'Foot traffic (0–10)', val: footTraffic, set: setFootTraffic, type: 'number', step: '0.1', max: '10' },
-                    { label: 'Infrastructure (0–10)', val: infraScore, set: setInfraScore, type: 'number', step: '0.1', max: '10' },
-                  ].map(({ label, val, set, ...rest }) => (
-                    <div key={label}>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-                      <input {...rest} min="0" placeholder="auto" value={val}
-                        onChange={(e) => set(e.target.value)}
-                        className="w-full border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
-                    </div>
-                  ))}
+                <div className="mt-3 space-y-3">
+                  <p className="text-xs text-gray-400 flex items-center gap-1">
+                    <Info size={11}/> Leave blank to use sector defaults
+                  </p>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { label: 'Nearby competitors', key: 'competitors', val: competitors, set: setCompetitors, step: '1',   min: '0', max: '100' },
+                      { label: 'Foot traffic (0–10)', key: 'footTraffic', val: footTraffic, set: setFootTraffic, step: '0.1', min: '0', max: '10'  },
+                      { label: 'Infrastructure (0–10)',key: 'infraScore',  val: infraScore,  set: setInfraScore,  step: '0.1', min: '0', max: '10'  },
+                    ].map(({ label, key, val, set, ...rest }) => (
+                      <div key={key}>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+                        <input type="number" {...rest} placeholder="auto" value={val}
+                          onChange={(e) => { set(e.target.value); setFieldErrors((p) => ({ ...p, [key]: undefined })) }}
+                          className={`w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 ${fieldErrors[key] ? 'border-red-400' : 'border-gray-200'}`}
+                        />
+                        <FieldError msg={fieldErrors[key]}/>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
 
             {error && (
               <div className="flex items-center gap-2 bg-red-50 text-red-600 text-sm rounded-lg px-3 py-2 border border-red-200">
-                <AlertCircle size={15} /> {error}
+                <AlertCircle size={15}/> {error}
               </div>
             )}
 
             <button type="submit" disabled={loading}
               className="w-full bg-brand-600 text-white py-2.5 rounded-lg font-medium hover:bg-brand-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
-              {loading ? <><Loader2 size={16} className="animate-spin" /> Analysing…</> : 'Run analysis →'}
+              {loading ? <><Loader2 size={16} className="animate-spin"/> Analysing…</> : 'Run analysis →'}
             </button>
           </form>
 
           {/* Map */}
-          <div style={{ height: 340 }} className="rounded-xl overflow-hidden border border-gray-100">
-            <KigaliMap selectedLat={lat} selectedLng={lng} onMapClick={handleMapClick} score={result?.score ?? null} />
+          <div style={{ height: 300 }} className="rounded-xl overflow-hidden border border-gray-100">
+            <KigaliMap selectedLat={lat} selectedLng={lng} onMapClick={handleMapClick} score={result?.score ?? null}/>
           </div>
-          <p className="text-xs text-gray-400 text-center">Click the map to update coordinates</p>
+          <p className="text-xs text-gray-400 text-center flex items-center justify-center gap-1">
+            <Crosshair size={11}/> Click anywhere — sector auto-detects from your pin
+          </p>
+
+          {/* Area composition — shows after a sector is set */}
+          <AreaAnalysis sector={sector}/>
         </div>
 
-        {/* ── RIGHT: results ── */}
+        {/* ── RIGHT ── */}
         <div>
           {!result && !loading && (
-            <div className="bg-white rounded-xl border border-gray-100 p-8 h-full flex flex-col items-center justify-center text-center">
-              <MapPin size={40} className="text-gray-200 mb-3" />
-              <p className="text-gray-400 text-sm">Select a location and run analysis to see results here.</p>
+            <div className="bg-white rounded-xl border border-gray-100 p-8 h-64 flex flex-col items-center justify-center text-center">
+              <MapPin size={40} className="text-gray-200 mb-3"/>
+              <p className="text-gray-500 text-sm font-medium mb-1">No analysis yet</p>
+              <p className="text-gray-400 text-xs">Select your business type, pick a location, and click Run analysis.</p>
             </div>
           )}
-
           {loading && (
-            <div className="bg-white rounded-xl border border-gray-100 p-8 h-full flex flex-col items-center justify-center">
-              <Loader2 size={32} className="animate-spin text-brand-500 mb-3" />
+            <div className="bg-white rounded-xl border border-gray-100 p-8 h-64 flex flex-col items-center justify-center">
+              <Loader2 size={32} className="animate-spin text-brand-500 mb-3"/>
               <p className="text-sm text-gray-400">Running ML model…</p>
             </div>
           )}
-
           {result && !loading && (
-            <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-6">
-              <div className="flex items-center gap-6">
-                <ScoreRing score={result.score} />
+            <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-5">
+              <div className="flex items-center gap-5">
+                <ScoreRing score={result.score}/>
                 <div>
                   <span className={`inline-block text-sm font-semibold px-3 py-1 rounded-full border ${verdictStyles[result.verdict] || ''}`}>
                     {result.verdict}
                   </span>
-                  <p className="text-sm text-gray-500 mt-1">Confidence: <span className="font-medium capitalize">{result.confidence}</span></p>
+                  <p className="text-sm text-gray-500 mt-1.5">Confidence: <span className="font-medium capitalize">{result.confidence}</span></p>
                   <p className="text-sm text-gray-500">Sector: <span className="font-medium">{result.sector_name || '—'}</span></p>
+                  <p className="text-sm text-gray-500">Business: <span className="font-medium capitalize">{businessType.replace('_', ' ')}</span></p>
                   <p className="text-xs text-gray-300 mt-1">Model: {result.model_version}</p>
                 </div>
               </div>
+
+              {selectedBizType && result.score < 0.50 && (
+                <div className="bg-amber-50 border border-amber-100 rounded-lg px-4 py-3">
+                  <p className="text-xs font-semibold text-amber-700 mb-1">💡 Tip for {selectedBizType.label}</p>
+                  <p className="text-xs text-amber-600">{selectedBizType.tips}</p>
+                </div>
+              )}
+
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">What drove this score</h3>
-                <FeatureChart features={result.top_features} />
+                <p className="text-sm font-semibold text-gray-700 mb-3">What drove this score</p>
+                <FeatureChart features={result.top_features}/>
               </div>
-              <p className="text-xs text-gray-300 border-t border-gray-50 pt-3">Query ID: {result.query_id}</p>
+
+              <p className="text-xs text-gray-300 border-t border-gray-50 pt-3">
+                Query ID: {result.query_id}
+              </p>
             </div>
           )}
         </div>

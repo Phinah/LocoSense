@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional
 from datetime import datetime
 
@@ -8,7 +8,6 @@ class PredictRequest(BaseModel):
     target_lat: float = Field(..., ge=-90, le=90)
     target_lng: float = Field(..., ge=-180, le=180)
     target_sector_name: Optional[str] = None
-    # Optional overrides — if omitted, sector defaults are used
     competitor_density:   Optional[int]   = Field(default=None, ge=0)
     foot_traffic_score:   Optional[float] = Field(default=None, ge=0, le=10)
     infrastructure_score: Optional[float] = Field(default=None, ge=0, le=10)
@@ -21,8 +20,8 @@ class PredictRequest(BaseModel):
     is_chain:             Optional[int]   = Field(default=None, ge=0, le=1)
     has_photos:           Optional[int]   = Field(default=None, ge=0, le=1)
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "business_type":      "restaurant",
                 "target_lat":         -1.9302,
@@ -32,6 +31,7 @@ class PredictRequest(BaseModel):
                 "review_count":       55,
             }
         }
+    )
 
 
 class FeatureExplanation(BaseModel):
@@ -74,8 +74,7 @@ class BusinessRecordOut(BusinessRecordCreate):
     source:     str
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SectorOut(BaseModel):
@@ -87,5 +86,4 @@ class SectorOut(BaseModel):
     population_density: Optional[int]
     income_proxy:       Optional[float]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from app.db.session import engine, Base, SessionLocal
-from app.api import predict, records, sectors, health, dataset
+from app.api import predict, records, sectors, health, dataset, area_analysis, advisor
 from app.ml.model import model_registry
 from app.db.seed import seed_sectors
 
@@ -22,21 +22,26 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Hunch API",
-    description="Business location recommendation system for Rwanda",
-    version="2.0.0",
+    description="Business location recommendation for Rwanda",
+    version="2.1.0",
     lifespan=lifespan,
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000", "https://hunch.vercel.app"],
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-app.include_router(health.router,   tags=["health"])
-app.include_router(predict.router,  prefix="/api/v1", tags=["predict"])
-app.include_router(records.router,  prefix="/api/v1", tags=["records"])
-app.include_router(sectors.router,  prefix="/api/v1", tags=["sectors"])
-app.include_router(dataset.router,  prefix="/api/v1", tags=["dataset"])
+app.include_router(health.router,                         tags=["health"])
+app.include_router(predict.router,       prefix="/api/v1", tags=["predict"])
+app.include_router(records.router,       prefix="/api/v1", tags=["records"])
+app.include_router(sectors.router,       prefix="/api/v1", tags=["sectors"])
+app.include_router(dataset.router,       prefix="/api/v1", tags=["dataset"])
+app.include_router(area_analysis.router, prefix="/api/v1", tags=["area-analysis"])
+app.include_router(advisor.router,       prefix="/api/v1", tags=["advisor"])
+
+from app.api import recommend
+app.include_router(recommend.router, prefix="/api/v1", tags=["recommend"])
