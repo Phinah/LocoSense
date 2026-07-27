@@ -16,6 +16,7 @@ export default function App() {
 
   const pages = {
     home: <HomePage onNavigate={setPage} />,
+    register: <RegisterPage onNavigate={setPage} />,
     predict: <PredictPage onNavigate={setPage} />,
     advisor: <AdvisorPage onNavigate={setPage} />,
     investor: <InvestorPage onNavigate={setPage} />,

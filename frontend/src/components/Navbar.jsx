@@ -4,6 +4,7 @@ import { useState } from 'react'
 const links = [
   { id: 'home',     label: 'Home'           },
   { id: 'predict',  label: 'Check location' },
+  { id: 'register', label: 'Register'       },
   { id: 'recommend', label: 'Find location'  }, // ← was advisor
   { id: 'investor', label: 'Investor'       },
   { id: 'data',     label: 'Dataset'        },
