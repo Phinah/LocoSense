@@ -107,7 +107,37 @@ export default function PredictPage() {
       }
     } finally { setLoading(false) }
   }
+const [searchQuery, setSearchQuery] = useState('')
+const [searching, setSearching] = useState(false)
 
+  const handleSearch = async (e) => {
+    e.preventDefault()
+    if (!searchQuery.trim()) return
+    setSearching(true)
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQuery)}&countrycodes=rw&format=json&limit=1`,
+        { headers: { 'Accept-Language': 'en' } }
+      )
+      const data = await res.json()
+      if (data.length > 0) {
+        const newLat = parseFloat(parseFloat(data[0].lat).toFixed(4))
+        const newLng = parseFloat(parseFloat(data[0].lon).toFixed(4))
+        setLat(newLat)
+        setLng(newLng)
+        setFieldErrors((p) => ({ ...p, lat: undefined, lng: undefined }))
+        // Auto-detect nearest sector
+        if (Object.keys(groupedSectors).length > 0) {
+          const nearest = nearestSector(newLat, newLng, groupedSectors)
+          if (nearest) { setSector(nearest.name); setDetectedSector(nearest.name) }
+        }
+      } else {
+        setFieldErrors((p) => ({ ...p, lat: 'Location not found in Rwanda — try a different name' }))
+      }
+    } catch {
+      setFieldErrors((p) => ({ ...p, lat: 'Search failed — check your connection' }))
+    } finally { setSearching(false) }
+  }
   const selectedBizType = BUSINESS_TYPES.find((b) => b.value === businessType)
 
   return (
@@ -172,7 +202,7 @@ export default function PredictPage() {
                 </p>
               )}
             </div>
-
+        
             {/* Coordinates */}
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -235,7 +265,32 @@ export default function PredictPage() {
               {loading ? <><Loader2 size={16} className="animate-spin"/> Analysing…</> : 'Run analysis →'}
             </button>
           </form>
-
+{/* Place search */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Search a place in Rwanda
+          </label>
+          <form onSubmit={handleSearch} className="flex gap-2">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="e.g. Kimironko, Remera market, KG 123 St..."
+              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            />
+            <button
+              type="submit"
+              disabled={searching || !searchQuery.trim()}
+              className="px-4 py-2 bg-brand-600 text-white text-sm rounded-lg hover:bg-brand-700 disabled:opacity-40 transition-colors flex items-center gap-1.5"
+            >
+              {searching ? <Loader2 size={14} className="animate-spin"/> : '🔍'}
+              {searching ? '' : 'Search'}
+            </button>
+          </form>
+          <p className="text-xs text-gray-400 mt-1">
+            Powered by OpenStreetMap · Rwanda only
+          </p>
+        </div>
           {/* Map */}
           <div style={{ height: 300 }} className="rounded-xl overflow-hidden border border-gray-100">
             <KigaliMap selectedLat={lat} selectedLng={lng} onMapClick={handleMapClick} score={result?.score ?? null}/>
@@ -290,9 +345,9 @@ export default function PredictPage() {
                 <FeatureChart features={result.top_features}/>
               </div>
 
-              <p className="text-xs text-gray-300 border-t border-gray-50 pt-3">
+              {/* <p className="text-xs text-gray-300 border-t border-gray-50 pt-3">
                 Query ID: {result.query_id}
-              </p>
+              </p> */}
             </div>
           )}
         </div>

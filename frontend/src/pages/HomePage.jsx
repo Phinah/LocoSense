@@ -51,7 +51,7 @@ export default function HomePage({ onNavigate }) {
 
         <p className="text-xl text-gray-500 max-w-2xl mx-auto mb-8 leading-relaxed">
           Hunch helps entrepreneurs across Rwanda find the right location
-          for their restaurant — before signing a lease — using machine learning
+          for their restaurant before signing a lease using machine learning
           trained on real Google Places data.
         </p>
 
