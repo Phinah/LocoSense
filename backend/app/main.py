@@ -29,7 +29,12 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "https://loco-sense-o6rw-lime.vercel.app",
+        "https://hunch.vercel.app",        # your custom domain if set
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
