@@ -1,20 +1,20 @@
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMapEvents } from 'react-leaflet'
+import { useEffect } from 'react'
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMapEvents, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
-// Fix default icon paths broken by bundlers
 delete L.Icon.Default.prototype._getIconUrl
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconUrl:       'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 })
 
 const selectedIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
+  iconUrl:   'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
+  iconSize:  [25, 41],
+  iconAnchor:[12, 41],
 })
 
 function ClickCapture({ onMapClick }) {
@@ -22,7 +22,17 @@ function ClickCapture({ onMapClick }) {
   return null
 }
 
-export default function KigaliMap({ selectedLat, selectedLng, onMapClick, score }) {
+function MapFlyTo({ lat, lng, trigger }) {
+  const map = useMap()
+  useEffect(() => {
+    if (lat && lng && trigger) {
+      map.flyTo([lat, lng], 16, { animate: true, duration: 1.2 })
+    }
+  }, [trigger])
+  return null
+}
+
+export default function KigaliMap({ selectedLat, selectedLng, flyTrigger, onMapClick, score }) {
   const center = [-1.9441, 30.0619]
 
   const scoreColor =
@@ -42,6 +52,8 @@ export default function KigaliMap({ selectedLat, selectedLng, onMapClick, score 
         attribution='&copy; <a href="https://www.openstreetmap.org">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+
+      <MapFlyTo lat={selectedLat} lng={selectedLng} trigger={flyTrigger} />
       <ClickCapture onMapClick={onMapClick} />
 
       {selectedLat && selectedLng && (

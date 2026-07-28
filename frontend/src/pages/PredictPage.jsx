@@ -7,6 +7,7 @@ import ScoreRing from '../components/ScoreRing'
 import FeatureChart from '../components/FeatureChart'
 import AreaAnalysis from '../components/AreaAnalysis'
 import { Loader2, AlertCircle, MapPin, Info, Crosshair } from 'lucide-react'
+import { useMap } from 'react-leaflet'
 
 const verdictStyles = {
   'Recommended':     'bg-green-50 text-green-700 border-green-200',
@@ -55,8 +56,11 @@ export default function PredictPage() {
   const [showAdv,         setShowAdv]         = useState(false)
   const [competitors,     setCompetitors]     = useState('')
   const [footTraffic,     setFootTraffic]     = useState('')
-  const [infraScore,      setInfraScore]      = useState('')
-
+  const [flyTrigger, setFlyTrigger] = useState(0)
+  const [infraScore,     setInfraScore]     = useState('')
+  const [competitorDens, setCompetitorDens] = useState('')
+  const [googleRating,   setGoogleRating]  = useState('')
+  const [reviewCount,    setReviewCount]   = useState('')
   useEffect(() => {
     getSectorsGrouped().then(setGroupedSectors).catch(() => {})
   }, [])
@@ -94,6 +98,9 @@ export default function PredictPage() {
         competitor_density:   competitors !== '' ? parseInt(competitors)   : null,
         foot_traffic_score:   footTraffic !== '' ? parseFloat(footTraffic) : null,
         infrastructure_score: infraScore  !== '' ? parseFloat(infraScore)  : null,
+        google_rating:        googleRating !== '' ? parseFloat(googleRating) : null,
+        review_count:         reviewCount  !== '' ? parseInt(reviewCount)   : null,
+        infra_score:          infraScore  !== '' ? parseFloat(infraScore)  : null,
       })
       setResult(data)
     } catch (err) {
@@ -107,37 +114,48 @@ export default function PredictPage() {
       }
     } finally { setLoading(false) }
   }
+
+
 const [searchQuery, setSearchQuery] = useState('')
 const [searching, setSearching] = useState(false)
 
-  const handleSearch = async (e) => {
-    e.preventDefault()
-    if (!searchQuery.trim()) return
-    setSearching(true)
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQuery)}&countrycodes=rw&format=json&limit=1`,
-        { headers: { 'Accept-Language': 'en' } }
-      )
-      const data = await res.json()
-      if (data.length > 0) {
-        const newLat = parseFloat(parseFloat(data[0].lat).toFixed(4))
-        const newLng = parseFloat(parseFloat(data[0].lon).toFixed(4))
-        setLat(newLat)
-        setLng(newLng)
-        setFieldErrors((p) => ({ ...p, lat: undefined, lng: undefined }))
-        // Auto-detect nearest sector
-        if (Object.keys(groupedSectors).length > 0) {
-          const nearest = nearestSector(newLat, newLng, groupedSectors)
-          if (nearest) { setSector(nearest.name); setDetectedSector(nearest.name) }
-        }
-      } else {
-        setFieldErrors((p) => ({ ...p, lat: 'Location not found in Rwanda — try a different name' }))
+const [searchedPlace, setSearchedPlace] = useState(null)
+
+const handleSearch = async () => {
+  if (!searchQuery.trim()) return
+  setSearching(true)
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQuery)}&countrycodes=rw&format=json&limit=1&addressdetails=1`,
+      { headers: { 'Accept-Language': 'en' } }
+    )
+    const data = await res.json()
+    if (data.length > 0) {
+      const newLat = parseFloat(parseFloat(data[0].lat).toFixed(4))
+      const newLng  = parseFloat(parseFloat(data[0].lon).toFixed(4))
+      const addr    = data[0].address || {}
+
+      const placeName = data[0].name || searchQuery
+      const village   = addr.suburb || addr.neighbourhood ||
+                        addr.village || addr.hamlet || addr.quarter || null
+
+      setLat(newLat)
+      setLng(newLng)
+      setSearchedPlace({ name: placeName, village })
+      setFieldErrors(p => ({ ...p, lat: undefined, lng: undefined }))
+      setFlyTrigger(t => t + 1)   // ← add this line
+      if (Object.keys(groupedSectors).length > 0) {
+        const nearest = nearestSector(newLat, newLng, groupedSectors)
+        if (nearest) { setSector(nearest.name); setDetectedSector(nearest.name) }
       }
-    } catch {
-      setFieldErrors((p) => ({ ...p, lat: 'Search failed — check your connection' }))
-    } finally { setSearching(false) }
-  }
+    } else {
+      setSearchedPlace(null)
+      setFieldErrors(p => ({ ...p, lat: 'Location not found in Rwanda — try a different name' }))
+    }
+  } catch {
+    setFieldErrors(p => ({ ...p, lat: 'Search failed — check your connection' }))
+  } finally { setSearching(false) }
+}
   const selectedBizType = BUSINESS_TYPES.find((b) => b.value === businessType)
 
   return (
@@ -152,6 +170,49 @@ const [searching, setSearching] = useState(false)
         <div className="space-y-4">
           <form onSubmit={handleSubmit}
             className="bg-white rounded-xl border border-gray-100 p-5 space-y-4" noValidate>
+{/* Place search */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Search a place in Rwanda
+          </label>
+          <form onSubmit={handleSearch} className="flex gap-2">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  e.stopPropagation()   // ← this is the fix, stops it reaching the outer form
+                  handleSearch()
+                }
+              }}
+              placeholder="e.g. Kimironko, Remera market, KG 123 St..."
+              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            />
+            <button
+              type="button"
+              onClick={handleSearch}
+              disabled={searching || !searchQuery.trim()}
+              className="px-4 py-2 bg-brand-600 text-white text-sm rounded-lg hover:bg-brand-700 disabled:opacity-40 transition-colors flex items-center gap-1.5"
+            >
+              {searching ? <Loader2 size={14} className="animate-spin" /> : '🔍'}
+              {searching ? '' : 'Search'}
+            </button>
+          </form>
+          <p className="text-xs text-gray-400 mt-1">
+            Powered by OpenStreetMap · Rwanda only
+          </p>
+        </div>
+          {/* Map */}
+          <div style={{ height: 300 }} className="rounded-xl overflow-hidden border border-gray-100">
+        <KigaliMap
+          selectedLat={lat}
+          selectedLng={lng}
+          flyTrigger={flyTrigger}
+          onMapClick={handleMapClick}
+          score={result?.score}
+        />          </div>
 
             {/* Business type */}
             <div>
@@ -265,39 +326,7 @@ const [searching, setSearching] = useState(false)
               {loading ? <><Loader2 size={16} className="animate-spin"/> Analysing…</> : 'Run analysis →'}
             </button>
           </form>
-{/* Place search */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Search a place in Rwanda
-          </label>
-          <form onSubmit={handleSearch} className="flex gap-2">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="e.g. Kimironko, Remera market, KG 123 St..."
-              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-            />
-            <button
-              type="submit"
-              disabled={searching || !searchQuery.trim()}
-              className="px-4 py-2 bg-brand-600 text-white text-sm rounded-lg hover:bg-brand-700 disabled:opacity-40 transition-colors flex items-center gap-1.5"
-            >
-              {searching ? <Loader2 size={14} className="animate-spin"/> : '🔍'}
-              {searching ? '' : 'Search'}
-            </button>
-          </form>
-          <p className="text-xs text-gray-400 mt-1">
-            Powered by OpenStreetMap · Rwanda only
-          </p>
-        </div>
-          {/* Map */}
-          <div style={{ height: 300 }} className="rounded-xl overflow-hidden border border-gray-100">
-            <KigaliMap selectedLat={lat} selectedLng={lng} onMapClick={handleMapClick} score={result?.score ?? null}/>
-          </div>
-          <p className="text-xs text-gray-400 text-center flex items-center justify-center gap-1">
-            <Crosshair size={11}/> Click anywhere — sector auto-detects from your pin
-          </p>
+
 
           {/* Area composition — shows after a sector is set */}
           <AreaAnalysis sector={sector}/>
@@ -327,7 +356,18 @@ const [searching, setSearching] = useState(false)
                     {result.verdict}
                   </span>
                   <p className="text-sm text-gray-500 mt-1.5">Confidence: <span className="font-medium capitalize">{result.confidence}</span></p>
-                  <p className="text-sm text-gray-500">Sector: <span className="font-medium">{result.sector_name || '—'}</span></p>
+                  {/* Place context — shown after a search */}
+                  {searchedPlace && (
+                    <div className="flex flex-wrap items-center gap-2 mb-4 px-3 py-2 bg-blue-50 border border-blue-100 rounded-lg text-sm">
+                      <span className="text-blue-700 font-semibold">📍 {searchedPlace.name}</span>
+                      {searchedPlace.village && (
+                        <span className="text-gray-500">· {searchedPlace.village}</span>
+                      )}
+                      {sector && (
+                        <span className="text-gray-500">· {sector} sector</span>
+                      )}
+                    </div>
+                  )}                  
                   <p className="text-sm text-gray-500">Business: <span className="font-medium capitalize">{businessType.replace('_', ' ')}</span></p>
                   <p className="text-xs text-gray-300 mt-1">Model: {result.model_version}</p>
                 </div>
